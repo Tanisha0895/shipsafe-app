@@ -77,6 +77,19 @@ services:
         condition: service_healthy
       product:
         condition: service_healthy
+  frontend:
+    build: ./services/frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      auth:
+        condition: service_healthy
+      product:
+        condition: service_healthy
+      order:
+        condition: service_healthy
+      payment:
+        condition: service_healthy
 
 volumes:
   pgdata:

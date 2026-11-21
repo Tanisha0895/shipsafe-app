@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShipSafe Store</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --chart: #E6EDF1;
+    --paper: #F7FAFB;
+    --ink: #14213D;
+    --muted: #5B6B82;
+    --line: #C9D5DE;
+    --signal: #F2B705;
+    --alert: #C8102E;
+    --sea: #1F7A8C;
+    --ok: #2E8B57;
+    --font: "Archivo", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--chart);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  button, input { font: inherit; }
+  :focus-visible { outline: 3px solid var(--signal); outline-offset: 2px; }
+
+  /* Header */
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 20px 24px 16px;
+  }
+  .masthead {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 32px;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+  .brand h1 {
+    margin: 0;
+    font-size: 40px;
+    line-height: 1;
+    font-weight: 800;
+    font-stretch: 125%;
+    letter-spacing: -0.01em;
+  }
+  .brand p { margin: 6px 0 0; color: #AFC0D3; max-width: 46ch; }
+
+  .health { display: flex; flex-wrap: wrap; gap: 6px; }
+  .h-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid #2D3C5C;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #DCE5EE;
+    min-width: 112px;
+  }
+  .h-dot { width: 9px; height: 9px; border-radius: 50%; background: #6A7A93; flex: none; }
+  .h-chip.up .h-dot { background: #4CC38A; }
+  .h-chip.down { border-color: var(--alert); }
+  .h-chip.down .h-dot { background: var(--alert); }
+  .h-ms { margin-left: auto; color: #8FA2B8; font-variant-numeric: tabular-nums; }
+
+  .account {
+    max-width: 1200px;
+    margin: 16px auto 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .account input {
+    padding: 8px 10px;
+    border: 1px solid #2D3C5C;
+    background: #1C2B4A;
+    color: var(--paper);
+    border-radius: 4px;
+    width: 220px;
+  }
+  .account .who { color: #AFC0D3; }
+
+  /* Buttons */
+  .btn {
+    padding: 8px 14px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--ink);
+    color: var(--paper);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn:disabled { opacity: .35; cursor: not-allowed; }
+  .btn.signal { background: var(--signal); color: var(--ink); }
+  .btn.ghost { background: transparent; color: inherit; border: 1px solid currentColor; }
+  .btn.alert { background: transparent; color: var(--alert); border: 1px solid var(--alert); }
+
+  /* Layout */
+  main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 28px 24px 64px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; }
+    .route { position: static !important; }
+  }
+  h2 { font-size: 22px; font-weight: 700; font-stretch: 112%; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 16px; font-size: 14px; }
+
+  /* Product manifest */
+  .manifest { list-style: none; margin: 0 0 40px; padding: 0; border-top: 2px solid var(--ink); }
+  .cargo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 96px 150px 64px auto;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .cargo-name { font-weight: 700; font-size: 17px; font-stretch: 108%; }
+  .cargo-price { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
+  .stock { font-size: 13px; color: var(--muted); }
+  .stock-bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-bottom: 4px; }
+  .stock-bar span { display: block; height: 100%; background: var(--sea); transition: width .4s ease; }
+  .stock.low .stock-bar span { background: var(--signal); }
+  .qty { width: 64px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--paper); }
+  @media (max-width: 600px) {
+    .cargo { grid-template-columns: 1fr auto; }
+    .stock { grid-column: 1 / -1; }
+  }
+
+  /* Orders */
+  .orders { width: 100%; border-collapse: collapse; background: var(--paper); border: 1px solid var(--line); }
+  .orders th { text-align: left; font-size: 13px; color: var(--muted); font-weight: 600; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .orders td { padding: 12px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  .orders tr:last-child td { border-bottom: 0; }
+  .flag { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+  .flag::before { content: ""; width: 10px; height: 10px; border-radius: 2px; background: var(--muted); }
+  .flag.PENDING::before { background: var(--signal); }
+  .flag.PAID::before { background: var(--ok); }
+  .flag.PAYMENT_FAILED::before, .flag.CANCELLED::before { background: var(--alert); }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .empty { color: var(--muted); padding: 20px 12px; }
+
+  /* Route map */
+  .route {
+    position: sticky;
+    top: 20px;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    padding: 18px;
+  }
+  .map {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 12px 0 18px;
+    align-items: center;
+  }
+  .map-col { display: flex; flex-direction: column; gap: 6px; }
+  .node {
+    padding: 8px 6px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    background: #fff;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .node.lit { background: var(--sea); color: #fff; border-color: var(--sea); }
+  .node.fail { background: var(--alert); color: #fff; border-color: var(--alert); }
+  .node.down { border-style: dashed; border-color: var(--alert); color: var(--alert); }
+
+  .log { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow: auto; }
+  .log li { padding: 10px 0; border-top: 1px solid var(--line); }
+  .log-head { display: flex; gap: 8px; align-items: baseline; }
+  .log-head strong { font-size: 14px; }
+  .code { font-size: 12px; font-weight: 700; padding: 1px 6px; border-radius: 3px; background: var(--ok); color: #fff; }
+  .code.c4 { background: var(--signal); color: var(--ink); }
+  .code.c5, .code.c0 { background: var(--alert); }
+  .ms { margin-left: auto; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .hops { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .hops .bad { color: var(--alert); font-weight: 700; }
+  .log-msg { font-size: 13px; margin-top: 2px; }
+
+  #toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 12px 18px;
+    border-radius: 4px;
+    border-left: 4px solid var(--signal);
+    display: none;
+    max-width: 90vw;
+  }
+  .hidden { display: none !important; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="masthead">
+    <div class="brand">
+      <h1>ShipSafe</h1>
+      <p>A small store running on four microservices. Every action you take is traced through the system on the right.</p>
+    </div>
+    <div class="health" id="health" aria-label="Service health"></div>
+  </div>
+
+  <div class="account" id="signedOut">
+    <input id="email" type="email" placeholder="Email" autocomplete="email">
+    <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="btn signal" onclick="login()">Log in</button>
+    <button class="btn ghost" onclick="register()">Create account</button>
+  </div>
+  <div class="account hidden" id="signedIn">
+    <span class="who">Signed in as <strong id="userEmail"></strong></span>
+    <button class="btn ghost" onclick="logout()">Log out</button>
+  </div>
+</header>
+
+<main>
+  <div>
+    <section>
+      <h2>Products</h2>
+      <p class="sub" id="source">Loading…</p>
+      <ul class="manifest" id="products"></ul>
+    </section>
+
+    <section id="ordersSection" class="hidden">
+      <h2>Your orders</h2>
+      <p class="sub">Pay to confirm an order. Use "Test decline" to see how a failed payment is handled.</p>
+      <table class="orders">
+        <thead><tr><th>Order</th><th>Product</th><th>Qty</th><th>Total</th><th>Status</th><th></th></tr></thead>
+        <tbody id="orders"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <aside class="route" aria-label="Request route">
+    <h2>Request route</h2>
+    <p class="sub" style="margin:0">Which services handled your last action.</p>
+    <div class="map" id="map"></div>
+    <ul class="log" id="log"></ul>
+  </aside>
+</main>
+
+<div id="toast" role="status"></div>
+
+<script>
+const SERVICES = ["auth", "product", "order", "payment"];
+const COLUMNS = [
+  [{ id: "browser", label: "Browser" }],
+  [{ id: "gateway", label: "Nginx" }],
+  [{ id: "auth", label: "Auth" }, { id: "product", label: "Product" }, { id: "order", label: "Order" }, { id: "payment", label: "Payment" }],
+  [{ id: "postgres", label: "Postgres" }, { id: "redis", label: "Redis" }],
+];
+const LABEL = Object.fromEntries(COLUMNS.flat().map((n) => [n.id, n.label]));
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const $ = (id) => document.getElementById(id);
+let token = null;
+let products = [];
+try { token = localStorage.getItem("token"); } catch (e) {}
+
+function saveToken(t) {
+  token = t;
+  try { t ? localStorage.setItem("token", t) : localStorage.removeItem("token"); } catch (e) {}
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+const rupees = (n) => "₹" + Number(n).toLocaleString("en-IN");
+
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => (t.style.display = "none"), 3200);
+}
+
+/* ---------- Route map ---------- */
+function renderMap() {
+  $("map").innerHTML = COLUMNS.map((col) =>
+    `<div class="map-col">${col.map((n) => `<div class="node" id="node-${n.id}">${n.label}</div>`).join("")}</div>`
+  ).join("");
+}
+
+function lightPath(path, failedAt) {
+  document.querySelectorAll(".node").forEach((n) => n.classList.remove("lit", "fail"));
+  const stopAt = failedAt ? path.indexOf(failedAt) : path.length - 1;
+  path.slice(0, stopAt + 1).forEach((id, i) => {
+    const el = $(`node-${id}`);
+    if (!el) return;
+    setTimeout(() => el.classList.add(id === failedAt ? "fail" : "lit"), reduceMotion ? 0 : i * 110);
+  });
+  clearTimeout(lightPath._timer);
+  lightPath._timer = setTimeout(
+    () => document.querySelectorAll(".node").forEach((n) => n.classList.remove("lit", "fail")),
+    2200 + path.length * 110
+  );
+}
+
+function failingNode(status, message, path, isGatewayPage) {
+  if (status === 0) return "gateway";
+  const named = /(auth|product|order|payment) service/i.exec(message || "");
+  if (named && status >= 500) return named[1].toLowerCase();
+  if (status >= 500 && isGatewayPage) return path[2];
+  if (status >= 500) return path[path.length - 1];
+  return null;
+}
+
+function addLog(label, path, status, ms, failedAt, message) {
+  const cls = status === 0 ? "c0" : status >= 500 ? "c5" : status >= 400 ? "c4" : "";
+  const stopAt = failedAt ? path.indexOf(failedAt) : path.length - 1;
+  const hops = path.slice(1, stopAt + 1)
+    .map((id) => (id === failedAt ? `<span class="bad">${LABEL[id]}</span>` : LABEL[id]))
+    .join(" → ");
+  const li = document.createElement("li");
+  li.innerHTML = `
+    <div class="log-head"><strong>${esc(label)}</strong><span class="code ${cls}">${status || "ERR"}</span><span class="ms">${ms} ms</span></div>
+    <div class="hops">${hops}</div>
+    ${message ? `<div class="log-msg">${esc(message)}</div>` : ""}`;
+  const log = $("log");
+  log.prepend(li);
+  while (log.children.length > 10) log.lastChild.remove();
+}
+
+/* ---------- API calls (every call is traced) ---------- */
+async function call(label, path, url, options = {}, silent = false) {
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const started = performance.now();
+  let status = 0, data = null, isGatewayPage = false;
+  try {
+    const res = await fetch(url, { ...options, headers });
+    status = res.status;
+    const text = await res.text();
+    try { data = text ? JSON.parse(text) : {}; } catch (e) { isGatewayPage = true; }
+  } catch (e) { /* network error: status stays 0 */ }
+  const ms = Math.round(performance.now() - started);
+
+  let message = null;
+  if (status < 200 || status >= 300) {
+    const d = data && data.detail;
+    message = d
+      ? (typeof d === "object" ? (d.reason || JSON.stringify(d)) : d)
+      : status === 0 ? "The gateway could not be reached" : `The gateway returned ${status}`;
+  }
+  const resolved = typeof path === "function" ? path(data) : path;
+  const failedAt = message ? failingNode(status, message, resolved, isGatewayPage) : null;
+
+  if (!silent || message) {
+    lightPath(resolved, failedAt);
+    addLog(label, resolved, status, ms, failedAt, message);
+  }
+  if (message) {
+    const err = new Error(message);
+    err.status = status;
+    throw err;
+  }
+  return data;
+}
+
+const P = {
+  auth: ["browser", "gateway", "auth", "postgres"],
+  me: ["browser", "gateway", "auth"],
+  products: (d) => d && d.source === "cache"
+    ? ["browser", "gateway", "product", "redis"]
+    : ["browser", "gateway", "product", "redis", "postgres"],
+  placeOrder: ["browser", "gateway", "order", "auth", "product", "postgres"],
+  orders: ["browser", "gateway", "order", "auth", "postgres"],
+  pay: ["browser", "gateway", "payment", "order", "auth", "product", "postgres"],
+  decline: ["browser", "gateway", "payment", "order", "auth", "postgres"],
+};
+
+/* ---------- Health strip ---------- */
+function renderHealth() {
+  $("health").innerHTML = SERVICES.map((s) =>
+    `<div class="h-chip" id="h-${s}" title="${LABEL[s]} service"><span class="h-dot"></span>${LABEL[s]}<span class="h-ms">–</span></div>`
+  ).join("");
+}
+
+async function checkHealth() {
+  await Promise.all(SERVICES.map(async (s) => {
+    const chip = $(`h-${s}`);
+    const node = $(`node-${s}`);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 2500);
+    const started = performance.now();
+    let ok = false, version = null;
+    try {
+      const res = await fetch(`/api/${s}/health`, { signal: ctrl.signal });
+      ok = res.ok;
+      const data = await res.json().catch(() => ({}));
+      version = data.version || null;
+    } catch (e) { ok = false; }
+    clearTimeout(timer);
+    const ms = Math.round(performance.now() - started);
+    chip.classList.toggle("up", ok);
+    chip.classList.toggle("down", !ok);
+    chip.querySelector(".h-ms").textContent = ok ? (version ? `v${version}` : `${ms} ms`) : "down";
+    if (node) node.classList.toggle("down", !ok);
+  }));
+}
+
+/* ---------- Account ---------- */
+function creds() {
+  return JSON.stringify({ email: $("email").value.trim(), password: $("password").value });
+}
+
+async function login() {
+  try {
+    const data = await call("Log in", P.auth, "/api/auth/login", { method: "POST", body: creds() });
+    saveToken(data.access_token);
+    toast("Logged in");
+    refresh();
+  } catch (e) { toast(e.message); }
+}
+
+async function register() {
+  try {
+    await call("Create account", P.auth, "/api/auth/register", { method: "POST", body: creds() });
+    toast("Account created");
+    login();
+  } catch (e) { toast(e.message); }
+}
+
+function logout() {
+  saveToken(null);
+  toast("Logged out");
+  refresh();
+}
+
+/* ---------- Products ---------- */
+async function loadProducts(silent = false) {
+  const data = await call("Load products", P.products, "/api/product/products", {}, silent);
+  products = data.items;
+  $("source").textContent = data.source === "cache"
+    ? "Served from the Redis cache. Reloads within 60 seconds skip the database."
+    : "Served from Postgres, then saved to the Redis cache.";
+  const maxStock = Math.max(...products.map((p) => p.stock), 1);
+  $("products").innerHTML = products.map((p) => `
+    <li class="cargo">
+      <div class="cargo-name">${esc(p.name)}</div>
+      <div class="cargo-price">${rupees(p.price)}</div>
+      <div class="stock ${p.stock <= 5 ? "low" : ""}">
+        <div class="stock-bar"><span style="width:${Math.round((p.stock / maxStock) * 100)}%"></span></div>
+        ${p.stock > 0 ? `${p.stock} left` : "Out of stock"}
+      </div>
+      <input class="qty" id="qty-${p.id}" type="number" min="1" max="${p.stock}" value="1" aria-label="Quantity of ${esc(p.name)}">
+      <button class="btn" onclick="placeOrder(${p.id})" ${!token || p.stock < 1 ? "disabled" : ""}
+        title="${token ? "" : "Log in to order"}">Order</button>
+    </li>`).join("");
+}
+
+/* ---------- Orders ---------- */
+async function placeOrder(productId) {
+  const quantity = parseInt($(`qty-${productId}`).value, 10) || 1;
+  try {
+    const order = await call("Place order", P.placeOrder, "/api/order/orders", {
+      method: "POST",
+      body: JSON.stringify({ product_id: productId, quantity }),
+    });
+    toast(`Order #${order.id} placed for ${rupees(order.total)}`);
+    loadOrders(true);
+  } catch (e) { toast(e.message); }
+}
+
+async function loadOrders(silent = false) {
+  const orders = await call("Load orders", P.orders, "/api/order/orders", {}, silent);
+  const nameOf = (id) => (products.find((p) => p.id === id) || {}).name || `Product ${id}`;
+  const label = { PENDING: "Awaiting payment", PAID: "Paid", PAYMENT_FAILED: "Payment failed", CANCELLED: "Cancelled" };
+  $("orders").innerHTML = orders.length
+    ? orders.slice().reverse().map((o) => `
+      <tr>
+        <td>#${o.id}</td>
+        <td>${esc(nameOf(o.product_id))}</td>
+        <td>${o.quantity}</td>
+        <td>${rupees(o.total)}</td>
+        <td><span class="flag ${esc(o.status)}">${esc(label[o.status] || o.status)}</span></td>
+        <td>${o.status === "PENDING" ? `
+          <div class="actions">
+            <button class="btn signal" onclick="pay(${o.id}, false)">Pay</button>
+            <button class="btn alert" onclick="pay(${o.id}, true)">Test decline</button>
+          </div>` : ""}</td>
+      </tr>`).join("")
+    : `<tr><td colspan="6" class="empty">No orders yet. Pick a product above and press Order.</td></tr>`;
+}
+
+async function pay(orderId, simulateFailure) {
+  try {
+    await call(
+      simulateFailure ? `Test decline on #${orderId}` : `Pay order #${orderId}`,
+      simulateFailure ? P.decline : P.pay,
+      "/api/payment/payments",
+      { method: "POST", body: JSON.stringify({ order_id: orderId, simulate_failure: simulateFailure }) }
+    );
+    toast(`Order #${orderId} paid`);
+  } catch (e) {
+    toast(`Order #${orderId} not paid: ${e.message}`);
+  }
+  try {
+    await loadProducts(true);
+    await loadOrders(true);
+  } catch (e) {}
+}
+
+/* ---------- Page state ---------- */
+async function refresh() {
+  let me = null;
+  if (token) {
+    try { me = await call("Check session", P.me, "/api/auth/me", {}, true); }
+    catch (e) { saveToken(null); }
+  }
+  $("signedOut").classList.toggle("hidden", !!me);
+  $("signedIn").classList.toggle("hidden", !me);
+  $("ordersSection").classList.toggle("hidden", !me);
+  if (me) $("userEmail").textContent = me.email;
+  try {
+    await loadProducts();
+    if (me) await loadOrders(true);
+  } catch (e) { toast(e.message); }
+}
+
+renderMap();
+renderHealth();
+checkHealth();
+setInterval(checkHealth, 5000);
+refresh();
+</script>
+</body>
+</html>
