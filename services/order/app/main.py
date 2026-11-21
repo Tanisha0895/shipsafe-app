@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, declarative_base, sessionmaker
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg://shop:shop@localhost:5432/shop")
 AUTH_URL = os.getenv("AUTH_URL", "http://localhost:8001")
 PRODUCT_URL = os.getenv("PRODUCT_URL", "http://localhost:8002")
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine)
@@ -131,4 +132,27 @@ def get_order(order_id: int, user: dict = Depends(current_user), db: Session = D
     order = db.get(Order, order_id)
     if not order or order.user_id != user["id"]:
         raise HTTPException(status_code=404, detail="Order not found")
+    return to_dict(order)
+def require_internal(x_internal_key: str | None = Header(default=None)):
+    if not INTERNAL_API_KEY or x_internal_key != INTERNAL_API_KEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+ALLOWED_STATUSES = {"PAID", "PAYMENT_FAILED", "CANCELLED"}
+
+
+class StatusUpdate(BaseModel):
+    status: str
+
+
+@app.patch("/orders/{order_id}/status", dependencies=[Depends(require_internal)])
+def update_status(order_id: int, data: StatusUpdate, db: Session = Depends(get_db)):
+    if data.status not in ALLOWED_STATUSES:
+        raise HTTPException(status_code=400, detail="Invalid status")
+    order = db.get(Order, order_id)
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    order.status = data.status
+    db.commit()
+    db.refresh(order)
     return to_dict(order)

@@ -4,8 +4,8 @@ import time
 from contextlib import asynccontextmanager
 
 import redis
-from fastapi import Depends, FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import Depends, FastAPI, Header, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy import Column, Float, Integer, String, create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
@@ -13,6 +13,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg://shop:shop@localho
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 CACHE_TTL = int(os.getenv("CACHE_TTL", "60"))
 CACHE_KEY = "products:all"
+INTERNAL_API_KEY = os.getenv("INTERNAL_API_KEY", "")
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine)
@@ -112,6 +113,32 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
 def create_product(data: NewProduct, db: Session = Depends(get_db)):
     product = Product(name=data.name, price=data.price, stock=data.stock)
     db.add(product)
+    db.commit()
+    db.refresh(product)
+    try:
+        cache.delete(CACHE_KEY)
+    except redis.RedisError:
+        pass
+    return to_dict(product)
+
+
+def require_internal(x_internal_key: str | None = Header(default=None)):
+    if not INTERNAL_API_KEY or x_internal_key != INTERNAL_API_KEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+class StockChange(BaseModel):
+    quantity: int = Field(gt=0)
+
+
+@app.post("/products/{product_id}/reserve", dependencies=[Depends(require_internal)])
+def reserve_stock(product_id: int, data: StockChange, db: Session = Depends(get_db)):
+    product = db.query(Product).filter_by(id=product_id).with_for_update().first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if product.stock < data.quantity:
+        raise HTTPException(status_code=409, detail="Not enough stock")
+    product.stock -= data.quantity
     db.commit()
     db.refresh(product)
     try:

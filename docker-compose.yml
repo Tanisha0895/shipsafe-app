@@ -36,6 +36,7 @@ services:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       REDIS_URL: redis://redis:6379/0
       CACHE_TTL: "60"
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
     ports:
       - "8002:8000"
     depends_on:
@@ -43,13 +44,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-        
+
   order:
     build: ./services/order
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       AUTH_URL: http://auth:8000
       PRODUCT_URL: http://product:8000
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
     ports:
       - "8003:8000"
     depends_on:
@@ -58,7 +60,23 @@ services:
       auth:
         condition: service_healthy
       product:
-        condition: service_healthy       
+        condition: service_healthy 
+  payment:
+    build: ./services/payment
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      ORDER_URL: http://order:8000
+      PRODUCT_URL: http://product:8000
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+    ports:
+      - "8004:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      order:
+        condition: service_healthy
+      product:
+        condition: service_healthy
 
 volumes:
   pgdata:
