@@ -95,7 +95,7 @@ def list_products(db: Session = Depends(get_db)):
 
     items = [to_dict(p) for p in db.query(Product).order_by(Product.id).all()]
     try:
-        cache.setex(CACHE_KEY, CACHE_TTL, json.dumps(items))
+        cache.set(CACHE_KEY, json.dumps(items), ex=CACHE_TTL)
     except redis.RedisError:
         pass
     return {"source": "database", "items": items}
