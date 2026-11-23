@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 .venv/
 test.db
+echo "test-results.xml" >> .gitignore
